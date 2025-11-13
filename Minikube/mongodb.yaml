@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: mplatteau
+  name: mongodb-deployment
+  labels:
+      app: mongodb # label pour identifier les ressources liées à MongoDB, fonctionne comme un tag
+spec:
+  replicas: 1
+  selector:
+    matchLabels: # ce déploiement concernera les pods avec le label mongodb
+      app: mongodb
+  template: # modèle de pod
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest # image officielle de MongoDB
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME 
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret # nom de l'élément Secret créé précédemment
+              key: mongodb-username # clé dans le Secret
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: mongodb-password
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: mplatteau
+  name: mongodb-service
+  labels:
+    app: mongodb
+spec:
+  selector: # sélectionne les pods avec le label mongodb (comme notre pod ci-dessus, défini dans template.metadata.labels)
+    app: mongodb
+  ports:
+  - protocol: TCP
+    port: 27017 # port exposé par le service, à vérifier sur l'image MongoDB dans dockerhub
+    targetPort: 27017 # port du conteneur

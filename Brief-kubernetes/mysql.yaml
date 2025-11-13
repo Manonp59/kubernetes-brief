@@ -1,0 +1,102 @@
+# StorageClass pour les disques managés Azure
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: managed-csi-mp
+provisioner: disk.csi.azure.com # provisioner pour les disques managés Azure
+parameters:
+  skuName: Standard_LRS # type de stockage
+  kind: Managed # type de stockage
+reclaimPolicy: Retain # conserve les données même si le PVC est supprimé
+volumeBindingMode: WaitForFirstConsumer # créé seulement lorsqu'un PVC l'utilise 
+allowVolumeExpansion: true # peut être modifié après la création
+
+---
+# Persistent Volume Claim pour MySQL
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: mplatteau
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: managed-csi-mp
+
+---
+
+# Déploiement pour MySQL
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: mplatteau
+  name: mysql-deployment
+  labels:
+      app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template: 
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      containers:
+      - name: mysql
+        image: sengsathit/brief-mysql:latest
+        ports:
+        - containerPort: 3306
+        readinessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: 3306  
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        env:  
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-username
+        - name: MYSQL_PASSWORD
+          valueFrom:  
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password 
+        - name: MYSQL_DATABASE
+          value: clients
+
+---
+# Service pour MySQL
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: mplatteau
+  name: mysql-service
+  labels:
+    app: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306

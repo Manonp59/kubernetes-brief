@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: mplatteau
+  name: frontend-deployment
+  labels:
+      app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: frontend
+  template: # modèle de pod
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: manon29/kub-frontend:latest
+        ports:
+        - containerPort: 8501
+        env: 
+        - name: env
+          value: "production"
+        
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: mplatteau
+  name: frontend-service
+  labels:
+    app: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+  - protocol: TCP
+    port: 80 
+    targetPort: 8501 # port du conteneur
