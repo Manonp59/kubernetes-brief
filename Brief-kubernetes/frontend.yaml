@@ -35,7 +35,6 @@ metadata:
   labels:
     app: frontend
 spec:
-  type: LoadBalancer
   selector:
     app: frontend
   ports:
