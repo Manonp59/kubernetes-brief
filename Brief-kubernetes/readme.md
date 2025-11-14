@@ -186,6 +186,49 @@ Il faut le gérer à deux endroits :
 
 En fonction de la réponse des probes. Si au moins un pod est ready, le service est sain. 
 
+## Réalisation du brief 
+
+### Fichiers 
+
+| Fichier        | Description détaillée |
+|----------------|------------------------|
+| **secret.yaml** | - Contient un **objet Secret Kubernetes** (type: Opaque).<br> - Stocke les identifiants sensibles : **username** et **password** de la base MySQL.<br> - Ces valeurs sont encodées en base64 et seront montées comme **variables d’environnement** dans les autres manifests. |
+| **mysql.yaml** | - Crée une **StorageClass** (si besoin) pour gérer le stockage persistant.<br> - Crée un **PersistentVolumeClaim (PVC)** utilisant cette StorageClass pour stocker les données MySQL.<br> - Définit un **Deployment mysql-deployment** avec :<br> &nbsp;&nbsp;• Un conteneur utilisant **l'image MySQL depuis Docker Hub**.<br> &nbsp;&nbsp;• Un **volume** monté pour persister `/var/lib/mysql`, lié au PVC.<br> &nbsp;&nbsp;• Les **variables d'environnement** pour la connexion MySQL (username, password, db name), qui proviennent du Secret.<br> &nbsp;&nbsp;• Des probes **liveness** et **readiness** en **TCP socket** sur le port 3306.<br> - Crée un **Service mysql-service** pour exposer MySQL dans le cluster. |
+| **api.yaml**   | - Crée un **Deployment api-deployment** avec :<br> &nbsp;&nbsp;• Un conteneur utilisant l'**image de l’API depuis Docker Hub**.<br> &nbsp;&nbsp;• Les **variables d’environnement** permettant à l’API de se connecter à MySQL.<br> &nbsp;&nbsp;• Des probes **liveness** et **readiness** en **HTTP GET** sur les endpoints de santé de l’API.<br> - Crée un **Service** (ClusterIP) pour exposer l’API dans le cluster. |
+| **frontend.yaml** | - Crée un **Deployment frontend-deployment** avec :<br> &nbsp;&nbsp;• Un conteneur utilisant l’**image du frontend depuis Docker Hub**.<br> - Crée un **Service frontend-service** (souvent ClusterIP) pour exposer l’interface frontend dans le cluster. |
+| **ingress.yaml** | - Crée un **Ingress** permettant d’accéder depuis l'extérieur :<br> &nbsp;&nbsp;• Une règle pour exposer l'**API** (ex: `/api` → service api-service).<br> &nbsp;&nbsp;• Une règle pour exposer le **frontend** (ex: `/` → service frontend-service).<br> - Peut inclure des annotations spécifiques (ex: Application Gateway, cert-manager…). |
+
+### Frontend 
+
+Le dossier frontend contient les fichiers permettant de construire l'image Docker du frontend. 
+
+### Captures d'écran 
+
+*Cluster créé dans un RG dédié*
+![cluster](images/cluster.png)
+
+*Namespace avec les déploiements créés*
+![namespace](images/namespace.png)
+
+*Exemple de pod (Mysql) et son conteneur*
+![pod](images/pod.png)
+
+*Services*
+![services](images/services.png)
+
+*Ingress*
+![ingress](images/ingress.png)
+
+*Frontend qui permet d'interagir avec l'api et donc la base de données. Un bouton permet de récupérer l'ensemble des clients*
+![fontend1](images/frontend1.png)
+
+*Un autre bouton permet de récupérer un client d'après son id*
+![frontend2](images/frontend2.png)
+
+*L'api est également accessible*
+![api](images/api.png)
+
+
 
 
 
